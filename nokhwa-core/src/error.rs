@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use crate::{frame_format::FrameFormat, types::ApiBackend};
+use crate::{frame_format::FrameFormat};
 use std::fmt::{Debug};
 use thiserror::Error;
 use crate::platform::Backends;
@@ -27,9 +27,9 @@ pub enum NokhwaError {
     #[error("Unitialized Camera. Call `init()` first!")]
     UnitializedError,
     #[error("Could not initialize {backend}: {error}")]
-    InitializeError { backend: ApiBackend, error: String },
+    InitializeError { backend: Backends, error: String },
     #[error("Could not shutdown {backend}: {error}")]
-    ShutdownError { backend: ApiBackend, error: String },
+    ShutdownError { backend: Backends, error: String },
     #[error("Error: {0}")]
     GeneralError(String),
     #[error("Could not generate required structure {structure}: {error}")]

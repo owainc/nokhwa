@@ -289,6 +289,14 @@ impl Sub for FrameRate {
     }
 }
 
+impl Sub for &FrameRate {
+    type Output = FrameRate;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        (self.rational - rhs.rational).into()
+    }
+}
+
 impl Rem for FrameRate {
     type Output = FrameRate;
 
@@ -345,8 +353,8 @@ impl CameraFormat {
 
     /// Get the resolution of the current [`CameraFormat`]
     #[must_use]
-    pub fn resolution(&self) -> Resolution {
-        self.resolution
+    pub fn resolution(&self) -> &Resolution {
+        &self.resolution
     }
 
     /// Get the width of the resolution of the current [`CameraFormat`]
@@ -368,8 +376,8 @@ impl CameraFormat {
 
     /// Get the frame rate of the current [`CameraFormat`]
     #[must_use]
-    pub fn frame_rate(&self) -> FrameRate {
-        self.frame_rate
+    pub fn frame_rate(&self) -> &FrameRate {
+        &self.frame_rate
     }
 
     /// Set the [`CameraFormat`]'s frame rate.
@@ -379,8 +387,8 @@ impl CameraFormat {
 
     /// Get the [`CameraFormat`]'s format.
     #[must_use]
-    pub fn format(&self) -> FrameFormat {
-        self.format
+    pub fn format(&self) -> &FrameFormat {
+        &self.format
     }
 
     /// Set the [`CameraFormat`]'s format.

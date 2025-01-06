@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use crate::camera::{AsyncCamera, Camera};
 use crate::error::NokhwaResult;
 use crate::types::{CameraIndex, CameraInformation};
@@ -8,7 +9,14 @@ pub enum Backends {
     WebWASM,
     AVFoundation,
     MicrosoftMediaFoundation,
+    OpenCV,
     Custom(&'static str)
+}
+
+impl Display for Backends {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 pub trait PlatformTrait {
@@ -26,6 +34,7 @@ pub trait PlatformTrait {
 }
 
 #[cfg(feature = "async")]
+#[cfg_attr(feature = "async", async_trait::async_trait)]
 pub trait AsyncPlatformTrait {
     const PLATFORM: Backends;
     type AsyncCamera: AsyncCamera;

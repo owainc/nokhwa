@@ -2518,7 +2518,6 @@ dependencies = [
  "num-rational 0.4.2",
  "num-traits",
  "opencv 0.93.1",
- "paste",
  "rgb",
  "serde",
  "thiserror 2.0.0",

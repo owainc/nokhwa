@@ -25,6 +25,7 @@ pub trait Setting {
 }
 
 #[cfg(feature = "async")]
+#[cfg_attr(feature = "async", async_trait::async_trait)]
 pub trait AsyncSetting {
     async fn enumerate_formats_async(&self) -> Result<Vec<CameraFormat>, NokhwaError>;
 
@@ -53,6 +54,7 @@ pub trait Capture {
 }
 
 #[cfg(feature = "async")]
+#[cfg_attr(feature = "async", async_trait::async_trait)]
 pub trait AsyncStream {
     async fn open_stream_async(&mut self) -> Result<Stream, NokhwaError>;
 
@@ -62,4 +64,5 @@ pub trait AsyncStream {
 pub trait Camera: Setting + Capture {}
 
 #[cfg(feature = "async")]
+#[cfg_attr(feature = "async", async_trait::async_trait)]
 pub trait AsyncCamera: Camera + AsyncSetting + AsyncStream {}

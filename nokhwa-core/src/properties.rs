@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
-use std::ops::{ControlFlow};
 use crate::error::{NokhwaError, NokhwaResult};
 use crate::ranges::{Range, ValidatableRange};
 
@@ -122,7 +121,7 @@ impl ControlBody {
     }
 
     pub fn set_value(&mut self, value: ControlValue) -> NokhwaResult<Option<ControlValue>> {
-        if let ControlFlow::Break(()) =  self.descriptor.validate(&value) {
+        if self.descriptor.validate(&value) {
             return Err(NokhwaError::SetPropertyError {
                 property: "Control Body".to_string(),
                 value: value.to_string(),
@@ -186,73 +185,68 @@ pub enum ControlValueDescriptor {
 }
 
 impl ControlValueDescriptor {
-    pub fn validate(&self, value: &ControlValue) -> ControlFlow<()> {
+    pub fn validate(&self, value: &ControlValue) -> bool {
         match self {
             ControlValueDescriptor::Null => {
                 if let &ControlValue::Null = value {
-                    return ControlFlow::Continue(())
+                    return false
                 }
             }
             ControlValueDescriptor::Integer(int_range) => {
                 if let ControlValue::Integer(i) = value {
-                    int_range.validate(i)?;
+                    return int_range.validate(i)
                 }
             }
             ControlValueDescriptor::BitMask => {
                 if let &ControlValue::BitMask(_) = value {
-                    return ControlFlow::Continue(())
+                    return true
                 }
             }
             ControlValueDescriptor::Float(float_range) => {
                 if let ControlValue::Float(i) = value {
-                    float_range.validate(i)?;
+                    return float_range.validate(i)
                 }
             }
             ControlValueDescriptor::String => {
                 if let &ControlValue::String(_) = value {
-                    return ControlFlow::Continue(())
+                    return true
                 }
             }
             ControlValueDescriptor::Boolean => {
                 if let &ControlValue::Boolean(_) = value {
-                    return ControlFlow::Continue(())
+                    return true
                 }
             }
             ControlValueDescriptor::Array(arr) => {
-                if arr.is_valid_value(value) {
-                    return ControlFlow::Continue(())
+                if let &ControlValue::Array(_) = value {
+                    return arr.is_valid_value(value)
                 }
             }
             ControlValueDescriptor::MultiChoice(choices) => {
-                if let &ControlValue::Array(values) = value {
+                if let ControlValue::Array(values) = value {
                     for v in values {
                         let mut contains = false;
+                        let vl: ControlValue = v.clone().into();
                         for choice in choices {
-                            if choice.is_valid_value(v.as_ref()) {
+                            if choice.is_valid_value(&vl) {
                                 contains = true;
                                 break;
                             }
                         }
-                        if !contains {
-                            return ControlFlow::Break(())
-                        }
+                        return contains
                     }
                 }
             }
             ControlValueDescriptor::Enum(choices) => {
                 for choice in choices {
-                    if choice.is_valid_value(&value) {
-                        return ControlFlow::Continue(())
-                    }
+                    return choice.is_valid_value(&value)
                 }
             }
             ControlValueDescriptor::Map(map) => {
                 if let ControlValue::Map(setting_map) = &value {
                     for (setting_key, setting_value) in setting_map {
                         if let Some(descriptor) = map.get(setting_key) {
-                            if !descriptor.is_valid_value(setting_value.as_ref()) {
-                                return ControlFlow::Break(())
-                            }
+                            return !descriptor.is_valid_primitive_value(setting_value)
                         }
                     }
                 }
@@ -260,15 +254,12 @@ impl ControlValueDescriptor {
             ControlValueDescriptor::Menu(menu) => {
                 if let ControlValue::KeyValue(k, v) = &value {
                     if let Some(descriptor) = menu.get(k) {
-                        if descriptor.is_valid_value(v.as_ref()) {
-                            return ControlFlow::Continue(())
-                        }
+                        return descriptor.is_valid_primitive_value(v)
                     }
                 }
             }
         }
-
-        ControlFlow::Break(())
+        false
     }
 }
 
@@ -283,35 +274,71 @@ pub enum ControlValuePrimitiveDescriptor {
 }
 
 impl ControlValuePrimitiveDescriptor {
-    pub fn is_valid_value(&self, other: &ControlValue) -> bool {
+    pub fn is_valid_primitive_value(&self, other: &ControlValuePrimitive) -> bool {
         match self {
             ControlValuePrimitiveDescriptor::Null => {
-                if let &ControlValue::Null = other {
+                if let ControlValuePrimitive::Null = other {
                     return true
                 }
             }
-            ControlValuePrimitiveDescriptor::Integer(int_range) => {
-                if let ControlValue::Integer(i) = other {
-                    return int_range.validate(i).is_ok()
+            ControlValuePrimitiveDescriptor::Integer(i) => {
+                if let ControlValuePrimitive::Integer(v) = other {
+                    return i.validate(v)
                 }
             }
             ControlValuePrimitiveDescriptor::BitMask => {
-                if let &ControlValue::BitMask(_) = other {
+                if let ControlValuePrimitive::BitMask(_) = other {
                     return true
                 }
             }
-            ControlValuePrimitiveDescriptor::Float(float_range) => {
-                if let ControlValue::Float(i) = other {
-                    return float_range.validate(i).is_ok()
+            ControlValuePrimitiveDescriptor::Float(f) => {
+                if let ControlValuePrimitive::Float(v) = other {
+                    return f.validate(v)
                 }
             }
             ControlValuePrimitiveDescriptor::String => {
-                if let &ControlValue::String(_) = other {
+                if let ControlValuePrimitive::String(_) = other {
                     return true
                 }
             }
             ControlValuePrimitiveDescriptor::Boolean => {
-                if let &ControlValue::Boolean(_) = other {
+                if let ControlValuePrimitive::Boolean(_) = other {
+                    return true
+                }
+            }
+        }
+        false
+    }
+
+    pub fn is_valid_value(&self, other: &ControlValue) -> bool {
+        match self {
+            ControlValuePrimitiveDescriptor::Null => {
+                if let ControlValue::Null = other {
+                    return true
+                }
+            }
+            ControlValuePrimitiveDescriptor::Integer(i) => {
+                if let ControlValue::Integer(v) = other {
+                    return i.validate(v)
+                }
+            }
+            ControlValuePrimitiveDescriptor::BitMask => {
+                if let ControlValue::BitMask(_) = other {
+                    return true
+                }
+            }
+            ControlValuePrimitiveDescriptor::Float(f) => {
+                if let ControlValue::Float(v) = other {
+                    return f.validate(v)
+                }
+            }
+            ControlValuePrimitiveDescriptor::String => {
+                if let ControlValue::String(_) = other {
+                    return true
+                }
+            }
+            ControlValuePrimitiveDescriptor::Boolean => {
+                if let ControlValue::Boolean(_) = other {
                     return true
                 }
             }
@@ -330,15 +357,15 @@ pub enum ControlValuePrimitive {
     Boolean(bool),
 }
 
-impl AsRef<ControlValue> for ControlValuePrimitive {
-    fn as_ref(&self) -> &ControlValue {
-        match self {
-            ControlValuePrimitive::Null => &ControlValue::Null,
-            ControlValuePrimitive::Integer(i) => &ControlValue::Integer(*i),
-            ControlValuePrimitive::BitMask(b) => &ControlValue::BitMask(*b),
-            ControlValuePrimitive::Float(f) => &ControlValue::Float(*f),
-            ControlValuePrimitive::String(s) => &ControlValue::String(s.clone()),
-            ControlValuePrimitive::Boolean(b) => &ControlValue::Boolean(*b),
+impl From<ControlValuePrimitive> for ControlValue {
+    fn from(value: ControlValuePrimitive) -> Self {
+        match value {
+            ControlValuePrimitive::Null => ControlValue::Null,
+            ControlValuePrimitive::Integer(i) => ControlValue::Integer(i),
+            ControlValuePrimitive::BitMask(b) => ControlValue::BitMask(b),
+            ControlValuePrimitive::Float(f) => ControlValue::Float(f),
+            ControlValuePrimitive::String(s) => ControlValue::String(s),
+            ControlValuePrimitive::Boolean(b) => ControlValue::Boolean(b),
         }
     }
 }
@@ -357,6 +384,22 @@ pub enum ControlValue {
 }
 
 impl ControlValue {
+    pub fn primitive_same_type(&self, other: &ControlValuePrimitive) -> bool {
+        match other {
+            ControlValuePrimitive::Null => {
+                if let ControlValue::Null = self {
+                    return true
+                }
+            }
+            ControlValuePrimitive::Integer(_) => {if let ControlValue::Integer(_) = self {return true}}
+            ControlValuePrimitive::BitMask(_) => {if let ControlValue::BitMask(_) = self {return true}}
+            ControlValuePrimitive::Float(_) => {if let ControlValue::Float(_) = self {return true}}
+            ControlValuePrimitive::String(_) => {if let ControlValue::String(_) = self {return true}}
+            ControlValuePrimitive::Boolean(_) => {if let ControlValue::Boolean(_) = self {return true}}
+        }
+        false
+    }
+
     pub fn same_type(&self, other: &ControlValue) -> bool {
         match self {
             ControlValue::Null => {
@@ -392,23 +435,12 @@ impl ControlValue {
 
         false
     }
+
+
 }
 
 impl Display for ControlValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Control Value: {self:?}")
-    }
-}
-
-impl From<ControlValuePrimitive> for ControlValue {
-    fn from(value: ControlValuePrimitive) -> Self {
-        match value {
-            ControlValuePrimitive::Null => ControlValue::Null,
-            ControlValuePrimitive::Integer(i) => ControlValue::Integer(i),
-            ControlValuePrimitive::BitMask(b) => ControlValue::BitMask(b),
-            ControlValuePrimitive::Float(f) => ControlValue::Float(f),
-            ControlValuePrimitive::String(s) => ControlValue::String(s),
-            ControlValuePrimitive::Boolean(b) => ControlValue::Boolean(b),
-        }
     }
 }

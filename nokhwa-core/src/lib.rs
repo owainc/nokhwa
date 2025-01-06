@@ -4,7 +4,7 @@
 #![allow(clippy::cast_sign_loss)]
 #![allow(clippy::cast_possible_truncation)]
 #![cfg_attr(feature = "test-fail-warning", deny(warnings))]
-#![cfg_attr(feature = "docs-features", feature(doc_cfg))]
+// #![cfg_attr(feature = "docs-features", feature(doc_cfg))]
 /*
  * Copyright 2022 l1npengtul <l1npengtul@protonmail.com> / The Nokhwa Contributors
  *
@@ -29,10 +29,9 @@ pub mod format_request;
 pub mod frame_buffer;
 pub mod frame_format;
 pub mod properties;
-pub mod query;
 pub mod ranges;
 pub mod traits;
 pub mod types;
 pub mod utils;
 pub mod stream;
-mod platform;
+pub mod platform;

@@ -15,7 +15,7 @@ pub trait ValidatableRange {
     type Validation;
 
     /// Validates the value.
-    fn validate(&self, value: &Self::Validation) -> Result<(), RangeValidationFailure>;
+    fn validate(&self, value: &Self::Validation) -> bool;
 }
 
 /// Creates a range of values.
@@ -117,7 +117,7 @@ where
 {
     type Validation = T;
 
-    fn validate(&self, value: &T) -> Result<(), RangeValidationFailure> {
+    fn validate(&self, value: &T) -> bool {
         num_range_validate(
             self.minimum,
             self.maximum,
@@ -195,11 +195,8 @@ where
 {
     type Validation = T;
 
-    fn validate(&self, value: &Self::Validation) -> Result<(), RangeValidationFailure> {
-        if self.available.contains(value) {
-            return Ok(());
-        }
-        Err(RangeValidationFailure::default())
+    fn validate(&self, value: &Self::Validation) -> bool {
+        self.available.contains(value)
     }
 }
 
@@ -294,11 +291,8 @@ where
 {
     type Validation = T;
 
-    fn validate(&self, value: &Self::Validation) -> Result<(), RangeValidationFailure> {
-        if self.appendable_options.contains(value) {
-            return Ok(());
-        }
-        Err(RangeValidationFailure::default())
+    fn validate(&self, value: &Self::Validation) -> bool {
+        self.appendable_options.contains(value)
     }
 }
 
@@ -336,8 +330,8 @@ where
 impl<T> ValidatableRange for Simple<T> {
     type Validation = T;
 
-    fn validate(&self, _: &Self::Validation) -> Result<(), RangeValidationFailure> {
-        Ok(())
+    fn validate(&self, _: &Self::Validation) -> bool {
+        true
     }
 }
 
@@ -390,7 +384,7 @@ fn num_range_validate<T>(
     upper_inclusive: bool,
     step: Option<T>,
     value: T,
-) -> Result<(), RangeValidationFailure>
+) -> bool
 where
     T: SimpleRangeItem,
 {
@@ -403,12 +397,12 @@ where
         // 7 - 4 = 3
         // 3 % 3 = 0 Valid!
         if prepared_value % step != T::ZERO {
-            return Err(RangeValidationFailure::default());
+            return false
         }
     }
 
     if value == default {
-        return Ok(());
+        return true
     }
 
     if let Some(min) = minimum {
@@ -418,7 +412,7 @@ where
             min < value
         };
         if test {
-            return Err(RangeValidationFailure::default());
+            return false
         }
     }
 
@@ -429,11 +423,11 @@ where
             max > value
         };
         if test {
-            return Err(RangeValidationFailure::default());
+            return false
         }
     }
 
-    Ok(())
+    true
 }
 
 pub trait SimpleRangeItem: Copy + Clone + Debug + Div<Output = Self> + Sub<Output = Self> + Rem<Output = Self> + PartialOrd + PartialEq {
