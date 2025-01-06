@@ -6,7 +6,7 @@ edition = "2021"
 description = "A Simple-to-use, cross-platform Rust Webcam Capture Library"
 keywords = ["camera", "webcam", "capture", "cross-platform"]
 categories = ["api-bindings", "multimedia", "os", "web-programming"]
-license = "Apache-2.0"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/l1npengtul/nokhwa"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
