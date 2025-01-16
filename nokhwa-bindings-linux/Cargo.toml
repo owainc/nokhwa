@@ -1,22 +1,25 @@
 [package]
 name = "nokhwa-bindings-linux"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/l1npengtul/nokhwa"
-description = "The V4L2 bindings crate for `nokhwa`"
-keywords = ["v4l", "v4l2", "linux", "capture", "webcam"]
+description = "The Linux V4L2 bindings crate for `nokhwa`"
+keywords = ["v4l", "v4l2", "linux", "nokhwa", "webcam"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
 v4l2 = ["v4l", "v4l2-sys-mit"]
+pw = ["pipewire"]
 
 [dependencies]
+v4l = { version = "0.14", features = ["v4l2"], optional = true }
+v4l2-sys-mit = { version = "0.3", optional = true }
+
+[dependencies.pipewire]
+version = "0.8"
+optional = true
 
 [dependencies.nokhwa-core]
 version = "0.2"
 path = "../nokhwa-core"
-
-[target.'cfg(target_os="linux")'.dependencies]
-v4l = { version = "0.14", optional = true }
-v4l2-sys-mit = { version = "0.3", optional = true }

@@ -7,7 +7,7 @@ use serde::{de, Serialize};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{window, MediaDeviceInfo, MediaDevices, MediaStream, MediaStreamConstraints, MediaStreamTrack, MediaTrackConstraints, Navigator};
 use nokhwa_core::frame_buffer::FrameBuffer;
-use nokhwa_core::properties::{CameraControl, ControlValue, KnownCameraControl};
+use nokhwa_core::control::{CameraControl, ControlValue, KnownCameraControl};
 use nokhwa_core::error::NokhwaError;
 use nokhwa_core::frame_format::FrameFormat;
 use nokhwa_core::traits::{AsyncCaptureTrait, AsyncOpenCaptureTrait, CaptureTrait, OpenCaptureTrait};

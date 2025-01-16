@@ -31,6 +31,10 @@ pub trait PlatformTrait {
     fn query(&mut self) -> NokhwaResult<Vec<CameraInformation>>;
 
     fn open(&mut self, index: &CameraIndex) -> NokhwaResult<Self::Camera>;
+
+    fn open_dynamic(&mut self, index: &CameraIndex) -> NokhwaResult<Box<dyn Camera>> {
+        self.open(index).map(|cam| Box::new(cam))
+    }
 }
 
 #[cfg(feature = "async")]
@@ -45,4 +49,9 @@ pub trait AsyncPlatformTrait {
     async fn query_async(&mut self) -> NokhwaResult<Vec<CameraInformation>>;
 
     async fn open_async (&mut self, index: &CameraIndex) -> NokhwaResult<Self::AsyncCamera>;
+
+
+    async fn open_dynamic_async(&mut self, index: &CameraIndex) -> NokhwaResult<Box<dyn Camera>> {
+        self.open_async(index).await.map(|cam| Box::new(cam))
+    }
 }

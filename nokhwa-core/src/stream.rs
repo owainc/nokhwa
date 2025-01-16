@@ -1,9 +1,17 @@
 use crate::error::{NokhwaError, NokhwaResult};
 use crate::frame_buffer::FrameBuffer;
-use flume::{Receiver, TryRecvError};
 use std::sync::Arc;
+use derive_builder::Builder;
+use flume::{Receiver, TryRecvError};
+
+#[derive(Clone, Debug, Default, PartialEq, Builder)]
+pub struct StreamConfiguration {
+    buffer_size: Option<u32>,
+
+}
 
 pub trait StreamInnerTrait {
+    fn configuration(&self) -> &StreamConfiguration;
     fn receiver(&self) -> Arc<Receiver<FrameBuffer>>;
     fn stop(&mut self) -> NokhwaResult<()>;
 }
@@ -18,13 +26,6 @@ impl Stream {
             inner,
         }
     }
-
-    // pub unsafe fn erase_lifetime(self) -> Stream<'static> {
-    //     Self {
-    //         inner: self.inner,
-    //         phantom_data: Default::default(),
-    //     }
-    // }
 
     pub fn check_disconnected(&self) -> NokhwaResult<()> {
         if self.inner.receiver().is_disconnected() {

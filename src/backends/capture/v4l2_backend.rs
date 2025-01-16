@@ -16,7 +16,7 @@ use nokhwa_core::{
     camera::{Open, Setting},
     error::{NokhwaError, NokhwaResult},
     frame_format::FrameFormat,
-    properties::CameraProperties,
+    control::CameraProperties,
     types::{CameraFormat, CameraIndex, CameraInformation, FrameRate, Resolution}
 };
 

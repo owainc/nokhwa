@@ -28,7 +28,7 @@ pub mod error;
 pub mod format_request;
 pub mod frame_buffer;
 pub mod frame_format;
-pub mod properties;
+pub mod control;
 pub mod ranges;
 pub mod traits;
 pub mod types;

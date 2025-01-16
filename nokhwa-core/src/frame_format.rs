@@ -63,10 +63,10 @@ pub enum FrameFormat {
 
     // RGB Formats
     Rgb332,
-    Rgb555,
-    Rgb565,
-
     Rgb888,
+
+    Bgr888,
+    BgrA8888,
 
     RgbA8888,
     ARgb8888,

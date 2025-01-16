@@ -46,7 +46,7 @@ pub mod wmf {
             Arc,
         },
     };
-    use nokhwa_core::properties::{CameraControl, ControlValueDescription, ControlValue, KnownCameraControl};
+    use nokhwa_core::control::{CameraControl, ControlValueDescription, ControlValue, KnownCameraControl};
     use windows::Win32::Media::DirectShow::{CameraControl_Flags_Auto, CameraControl_Flags_Manual};
     use windows::Win32::Media::MediaFoundation::{
         IMFMediaType, MFCreateSample, MF_SOURCE_READER_FIRST_VIDEO_STREAM,
@@ -1229,7 +1229,7 @@ pub mod wmf {
         CameraFormat, CameraIndex, CameraInformation,
     };
     use std::borrow::Cow;
-    use nokhwa_core::properties::{CameraControl, ControlValue, KnownCameraControl};
+    use nokhwa_core::control::{CameraControl, ControlValue, KnownCameraControl};
 
     pub fn initialize_mf() -> Result<(), NokhwaError> {
         Err(NokhwaError::NotImplementedError(

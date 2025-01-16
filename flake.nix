@@ -5,50 +5,59 @@
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = { self, nixpkgs, rust-overlay, flake-utils, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        overlays = [ (import rust-overlay) ];
+  outputs = {
+    self,
+    nixpkgs,
+    rust-overlay,
+    flake-utils,
+    ...
+  }:
+    flake-utils.lib.eachDefaultSystem (
+      system: let
         pkgs = import nixpkgs {
-          inherit system overlays;
+          inherit system;
+          overlays = [rust-overlay.overlays.default];
         };
-      in
-      {
+        rustbin = pkgs.rust-bin.selectLatestNightlyWith (toolchain:
+          toolchain.default.override {
+            extensions = ["rust-src"];
+          });
+      in {
+        formatter = pkgs.alejandra;
+
         devShells.default = pkgs.mkShell {
-          #LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
-          #BINDGEN_EXTRA_CLANG_ARGS = "-isystem ${pkgs.libclang.lib}/lib/clang/${flake-utils.lib.getVersion pkgs.clang}/include";
+          packages = [
+            rustbin
+          ] ++ (with pkgs; [
+              llvmPackages.libclang.lib
+              llvmPackages.clang
+              pkg-config
+              cmake
+              vcpkg
+              rustPlatform.bindgenHook
+              xmlstarlet
+              opencv
+              alsa-lib
+              systemdLibs
+              cmake
+              fontconfig
+              linuxHeaders
+              v4l-utils
+              libv4l
+              pipewire
+          ]);
 
-          buildInputs = with pkgs; [
-            rust-bin.stable.latest.default
-            rust-bin.stable.latest.rustfmt
-            rust-bin.stable.latest.clippy
-          ];
-          nativeBuildInputs = [
-              pkgs.pkg-config
-              pkgs.cmake
-              pkgs.vcpkg
-          ];
-            packages = with pkgs; [
-                rust-analyzer
-                pkg-config
-                opencv
-                alsa-lib
-                systemdLibs
-                cmake
-                fontconfig
-                linuxHeaders
-                rustPlatform.bindgenHook
-                llvmPackages.libclang.lib
-                llvmPackages.clang
-                v4l-utils
-                libv4l
-            ];
-            LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
-            shellHook = ''
-              export LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
-              cargo version
+          env.RUST_SRC_PATH = "${rustbin}/lib/rustlib/src/rust/library";
+          env.LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+
+          shellHook = let
+            pathToRustProject = "/project/component[@name='RustProjectSettings']";
+          in
+            ''
+              echo "WONDERHOOOOOY!!!!"
+              xmlstarlet edit --inplace --update "${pathToRustProject}/option[@name='explicitPathToStdlib']/@value" --value "${rustbin}/lib/rustlib/src/rust/library" .idea/workspace.xml
+              xmlstarlet edit --inplace --update "${pathToRustProject}/option[@name='toolchainHomeDirectory']/@value" --value "${rustbin}/bin" .idea/workspace.xml
             '';
-
         };
       }
     );

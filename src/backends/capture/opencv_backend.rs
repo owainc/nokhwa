@@ -33,7 +33,7 @@ use opencv::{
     },
 };
 use std::{borrow::Cow, collections::HashMap};
-use nokhwa_core::properties::{CameraControl, ControlValueDescription, ControlValue, KnownCameraControl};
+use nokhwa_core::control::{CameraControl, ControlValueDescription, ControlValue, KnownCameraControl};
 
 /// Attempts to convert a [`KnownCameraControl`] into a `OpenCV` video capture property.
 /// If the associated control is not found, this will return `Err`

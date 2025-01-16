@@ -1,6 +1,6 @@
 use crate::error::{NokhwaError};
 use crate::frame_format::FrameFormat;
-use crate::properties::{ControlId, ControlValue, Properties};
+use crate::control::{ControlId, ControlValue, Controls};
 use crate::types::{CameraFormat, FrameRate, Resolution};
 use std::collections::HashMap;
 use crate::stream::Stream;
@@ -15,9 +15,11 @@ pub trait Setting {
 
     fn set_format(&self, camera_format: CameraFormat) -> Result<(), NokhwaError>;
 
-    fn properties(&self) -> &Properties;
+    fn controls(&self) -> &Controls;
 
-    fn set_property(
+    fn refresh_controls(&mut self) -> Result<(), NokhwaError>;
+
+    fn set_control(
         &mut self,
         property: &ControlId,
         value: ControlValue,
@@ -36,7 +38,7 @@ pub trait AsyncSetting {
 
     async fn set_format_async(&self, camera_format: CameraFormat) -> Result<(), NokhwaError>;
 
-    async fn properties_async(&self) -> &Properties;
+    async fn properties_async(&self) -> &Controls;
 
     async fn set_property_async(
         &mut self,

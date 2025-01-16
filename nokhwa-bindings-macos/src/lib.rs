@@ -246,7 +246,7 @@ mod internal {
         ffi::{c_float, c_void, CStr},
         sync::Arc,
     };
-    use nokhwa_core::properties::{CameraControl, ControlValueDescription, ControlValue, KnownCameraControl};
+    use nokhwa_core::control::{CameraControl, ControlValueDescription, ControlValue, KnownCameraControl};
 
     const UTF8_ENCODING: usize = 4;
     type CGFloat = c_float;

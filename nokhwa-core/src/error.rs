@@ -24,8 +24,6 @@ pub type NokhwaResult<T> = Result<T, NokhwaError>;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Error, Debug, Clone)]
 pub enum NokhwaError {
-    #[error("Unitialized Camera. Call `init()` first!")]
-    UnitializedError,
     #[error("Could not initialize {backend}: {error}")]
     InitializeError { backend: Backends, error: String },
     #[error("Could not shutdown {backend}: {error}")]

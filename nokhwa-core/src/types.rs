@@ -11,8 +11,8 @@ use std::{
 };
 use std::num::NonZeroI32;
 use std::ops::{Div, Rem};
-use num_rational::Rational32;
-use crate::ranges::{SimpleRangeItem};
+use num_rational::{Ratio, Rational32};
+use crate::ranges::{RangeItem};
 use num_traits::FromPrimitive;
 
 /// Describes the index of the camera.
@@ -106,6 +106,7 @@ pub struct Resolution {
 impl Resolution {
     /// Create a new resolution from 2 image size coordinates.
     #[must_use]
+    // TODO: make this height and width.
     pub const fn new(x: u32, y: u32) -> Self {
         Resolution {
             width_x: x,
@@ -211,7 +212,7 @@ impl Rem for Resolution {
     }
 }
 
-impl SimpleRangeItem for Resolution {
+impl RangeItem for Resolution {
     const ZERO: Self = Resolution::new(0, 0);
 }
 
@@ -305,7 +306,7 @@ impl Rem for FrameRate {
     }
 }
 
-impl SimpleRangeItem for FrameRate {
+impl RangeItem for FrameRate {
     const ZERO: Self = FrameRate::frame_rate(0);
 }
 
