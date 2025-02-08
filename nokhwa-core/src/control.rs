@@ -4,7 +4,7 @@ use ordered_float::OrderedFloat;
 use std::collections::hash_map::{Keys, Values};
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 
 pub type PlatformSpecificControlId = u64;
 
