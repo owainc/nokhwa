@@ -1,7 +1,7 @@
-use std::fmt::{Display, Formatter};
 use crate::camera::{AsyncCamera, Camera};
 use crate::error::NokhwaResult;
 use crate::types::{CameraIndex, CameraInformation};
+use std::fmt::{Display, Formatter};
 
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Backends {
@@ -10,7 +10,7 @@ pub enum Backends {
     AVFoundation,
     MicrosoftMediaFoundation,
     OpenCV,
-    Custom(&'static str)
+    Custom(&'static str),
 }
 
 impl Display for Backends {
@@ -23,16 +23,15 @@ pub trait PlatformTrait {
     const PLATFORM: Backends;
     type Camera: Camera;
 
-
     fn block_on_permission(&mut self) -> NokhwaResult<()>;
 
     fn check_permission_given(&mut self) -> bool;
 
     fn query(&mut self) -> NokhwaResult<Vec<CameraInformation>>;
 
-    fn open(&mut self, index: &CameraIndex) -> NokhwaResult<Self::Camera>;
+    fn open(&mut self, index: CameraIndex) -> NokhwaResult<Self::Camera>;
 
-    fn open_dynamic(&mut self, index: &CameraIndex) -> NokhwaResult<Box<dyn Camera>> {
+    fn open_dynamic(&mut self, index: CameraIndex) -> NokhwaResult<Box<dyn Camera>> {
         self.open(index).map(|cam| Box::new(cam))
     }
 }
@@ -43,13 +42,11 @@ pub trait AsyncPlatformTrait {
     const PLATFORM: Backends;
     type AsyncCamera: AsyncCamera;
 
-
     async fn await_permission(&mut self) -> NokhwaResult<()>;
 
     async fn query_async(&mut self) -> NokhwaResult<Vec<CameraInformation>>;
 
-    async fn open_async (&mut self, index: &CameraIndex) -> NokhwaResult<Self::AsyncCamera>;
-
+    async fn open_async(&mut self, index: &CameraIndex) -> NokhwaResult<Self::AsyncCamera>;
 
     async fn open_dynamic_async(&mut self, index: &CameraIndex) -> NokhwaResult<Box<dyn Camera>> {
         self.open_async(index).await.map(|cam| Box::new(cam))
