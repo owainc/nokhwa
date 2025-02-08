@@ -16,3 +16,4 @@
 #[cfg(feature = "v4l2")]
 pub mod v4l2;
 pub mod pipewire;
+mod v4l2r;

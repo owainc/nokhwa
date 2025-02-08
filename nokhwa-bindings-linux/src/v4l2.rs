@@ -1,23 +1,27 @@
-use std::collections::{HashMap, HashSet};
-use std::mem;
-use std::num::NonZeroI32;
-use v4l::context::enum_devices;
-use v4l::{Capabilities, Device, Format, FourCC, Fraction, FrameInterval};
-use v4l::control::{Description, Flags, MenuItem, Type, Value};
-use v4l::frameinterval::FrameIntervalEnum;
-use v4l::video::Output;
-use v4l::video::output::Parameters;
 use nokhwa_core::camera::{Camera, Capture, Setting};
+use nokhwa_core::control::{ControlDescription, ControlFlags, ControlId, ControlValue, ControlValueDescriptor, Controls};
 use nokhwa_core::error::{NokhwaError, NokhwaResult};
 use nokhwa_core::frame_format::FrameFormat;
 use nokhwa_core::platform::{Backends, PlatformTrait};
-use nokhwa_core::control::{ControlBody, ControlFlags, ControlId, ControlValue, ControlValueDescriptor, Controls};
+use nokhwa_core::ranges::Range;
 use nokhwa_core::stream::Stream;
 use nokhwa_core::types::{CameraFormat, CameraIndex, CameraInformation, FrameRate, Resolution};
-use v4l2_sys_mit::{V4L2_CID_FOCUS_ABSOLUTE, V4L2_CID_FOCUS_RELATIVE, V4L2_CID_AUTO_FOCUS_RANGE, V4L2_CID_FOCUS_AUTO, V4L2_CID_AUTO_FOCUS_STATUS, V4L2_CID_ISO_SENSITIVITY, V4L2_CID_EXPOSURE_AUTO, V4L2_CID_AUTO_EXPOSURE_BIAS, V4L2_CID_EXPOSURE_METERING, V4L2_CID_EXPOSURE_ABSOLUTE, V4L2_CID_ISO_SENSITIVITY_AUTO, V4L2_CID_IRIS_ABSOLUTE, V4L2_CID_IRIS_RELATIVE, V4L2_CID_AUTO_WHITE_BALANCE, V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE, V4L2_CID_ZOOM_CONTINUOUS, V4L2_CID_ZOOM_RELATIVE, V4L2_CID_ZOOM_ABSOLUTE, V4L2_CID_FLASH_LED_MODE, V4L2_CID_FLASH_STROBE, V4L2_CID_FLASH_STROBE_STATUS, V4L2_CID_CAMERA_ORIENTATION, V4L2_CTRL_FLAG_DISABLED, V4L2_CID_FLASH_STROBE_STOP, v4l2_querymenu};
-use v4l::device::Handle;
-use v4l::v4l2::ioctl;
-use nokhwa_core::ranges::Range;
+use std::collections::hash_map::{Keys, Values};
+use std::collections::{HashMap, HashSet};
+use std::num::NonZeroI32;
+use std::sync::Arc;
+use std::thread::JoinHandle;
+use flume::{Sender, Receiver, unbounded, bounded};
+use v4l::context::enum_devices;
+use v4l::control::{Description, Flags, MenuItem, Type, Value};
+use v4l::frameinterval::FrameIntervalEnum;
+use v4l::video::output::Parameters;
+use v4l::video::Output;
+use v4l::{Capabilities, Device, Format, FourCC, Fraction, FrameInterval};
+use v4l2_sys_mit::{V4L2_CID_AUTO_EXPOSURE_BIAS, V4L2_CID_AUTO_FOCUS_RANGE, V4L2_CID_AUTO_FOCUS_STATUS, V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE, V4L2_CID_AUTO_WHITE_BALANCE, V4L2_CID_CAMERA_ORIENTATION, V4L2_CID_EXPOSURE_ABSOLUTE, V4L2_CID_EXPOSURE_AUTO, V4L2_CID_EXPOSURE_METERING, V4L2_CID_FLASH_LED_MODE, V4L2_CID_FLASH_STROBE, V4L2_CID_FLASH_STROBE_STATUS, V4L2_CID_FLASH_STROBE_STOP, V4L2_CID_FOCUS_ABSOLUTE, V4L2_CID_FOCUS_AUTO, V4L2_CID_FOCUS_RELATIVE, V4L2_CID_IRIS_ABSOLUTE, V4L2_CID_IRIS_RELATIVE, V4L2_CID_ISO_SENSITIVITY, V4L2_CID_ISO_SENSITIVITY_AUTO, V4L2_CID_ZOOM_ABSOLUTE, V4L2_CID_ZOOM_CONTINUOUS, V4L2_CID_ZOOM_RELATIVE};
+use v4l::io::traits::OutputStream;
+use v4l::prelude::MmapStream;
+use nokhwa_core::frame_buffer::FrameBuffer;
 
 fn index_capabilities_to_camera_info(index: u32, capabilities: Capabilities) -> CameraInformation {
     let name = capabilities.card;
@@ -107,7 +111,22 @@ macro_rules! define_control_id_conv {
                     })
                 }
                 _ => Err(NokhwaError::ConversionError("Could not match ID".to_string())
-)
+                )
+            }
+        }
+
+        fn control_id_to_cid_ref(control_id: &ControlId) -> Result<u32, NokhwaError> {
+            match control_id {
+                $(
+                $control_id => Ok($v4l_cid)
+                )+
+                ControlId::PlatformSpecific(specific_id) => {
+                    u32::try_from(specific_id).map_err(|why| {
+                        NokhwaError::ConversionError("ID must be a u32".to_string())
+                    })
+                }
+                _ => Err(NokhwaError::ConversionError("Could not match ID".to_string())
+                )
             }
         }
 
@@ -186,7 +205,7 @@ fn flags(flags: Flags) -> HashSet<ControlFlags> {
     output_flags
 }
 
-fn convert_description_to_ctrl_body(description: Description) -> Option<ControlBody> {
+fn convert_description_to_ctrl_body(description: Description) -> Option<ControlDescription> {
     let flags = flags(description.flags);
 
     let (descriptor, default) = match description.typ {
@@ -233,9 +252,6 @@ fn convert_description_to_ctrl_body(description: Description) -> Option<ControlB
             )
         }
         Type::IntegerMenu | Type::Menu => {
-            // We just initialize the values to Null for now.
-            // We fill it out later.
-
             // our keys
             let descriptor = match description.items {
                 Some(items) => {
@@ -270,12 +286,10 @@ fn convert_description_to_ctrl_body(description: Description) -> Option<ControlB
         _ => return None,
     };
 
-    Some(
-        ControlBody::new(
-            flags,
-            descriptor,
-            default
-        )
+    ControlDescription::new(
+        flags,
+        descriptor,
+        default
     )
 }
 
@@ -307,8 +321,25 @@ impl PlatformTrait for V4L2Platform {
             }).flatten().collect::<Vec<_>>())
     }
 
-    fn open(&mut self, index: &CameraIndex) -> NokhwaResult<Self::Camera> {
-        todo!()
+    fn open(&mut self, index: CameraIndex) -> NokhwaResult<Self::Camera> {
+        let device = match &index {
+            CameraIndex::Index(i) => Device::new(*i as usize),
+            CameraIndex::String(path) => Device::with_path(path)
+        }.map_err(|why| {
+            NokhwaError::OpenDeviceError(index.to_string(), why.to_string())
+        })?;
+
+        let mut v4l2_camera = V4L2Camera {
+            device,
+            camera_format: None,
+            camera_index: index,
+            controls: Default::default(),
+            stream: None,
+        };
+
+        v4l2_camera.refresh_controls()?;
+
+        Ok(v4l2_camera)
     }
 }
 
@@ -316,7 +347,8 @@ pub struct V4L2Camera {
     device: Device,
     camera_format: Option<CameraFormat>,
     camera_index: CameraIndex,
-    controls: Option<Controls>,
+    controls: Controls,
+    stream: Option<Stream>,
 }
 
 impl Setting for V4L2Camera {
@@ -405,13 +437,32 @@ impl Setting for V4L2Camera {
         Ok(())
     }
 
-    fn controls(&self) -> &Controls {
+    fn control_ids(&self) -> Keys<ControlId, ControlDescription> {
+        self.controls.ids()
+    }
 
-        match self.controls {
+    fn control_descriptions(&self) -> Values<ControlId, ControlDescription> {
+        self.controls.descriptions()
+    }
 
-        }
+    fn control_values(&self) -> Values<ControlId, ControlValue> {
+        self.controls.values()
+    }
 
-        let properties = self.device.query_controls().map_err(|why| {
+    fn control_value(&self, id: &ControlId) -> Option<&ControlValue> {
+        self.controls.value(id)
+    }
+
+    fn control_description(&self, id: &ControlId) -> Option<&ControlDescription> {
+        self.controls.description(id)
+    }
+
+    fn set_control(&mut self, property: &ControlId, value: ControlValue) -> Result<(), NokhwaError> {
+        self.controls.set_control_value(property, value)
+    }
+
+    fn refresh_controls(&mut self) -> Result<(), NokhwaError> {
+        let descriptions = self.device.query_controls().map_err(|why| {
             NokhwaError::GetPropertyError { property: "query_controls".to_string(), error: why.to_string() }
         })?.into_iter().map(|description| {
             let id = cid_to_control_id(description.id);
@@ -419,17 +470,84 @@ impl Setting for V4L2Camera {
             convert_description_to_ctrl_body(description).map(|body| {
                 (id, body)
             })
-        }).flatten().collect::<HashMap<ControlId, ControlBody>>();
-    }
+        }).flatten().collect::<HashMap<ControlId, ControlDescription>>();
 
-    fn set_control(&mut self, property: &ControlId, value: ControlValue) -> Result<(), NokhwaError> {
-        todo!()
+        let values = descriptions.keys().into_iter().copied().flat_map(|k| control_id_to_cid(k).map(|cid| (k, cid))).flat_map(|(id, cid)| {
+            self.device.control(cid).map(|v| (id, v))
+        }).map(|(id, value)| {
+            (id, match value.value {
+                Value::None => ControlValue::Null,
+                Value::Integer(i) => ControlValue::Integer(i),
+                Value::Boolean(b) => ControlValue::Boolean(b),
+                Value::String(s) => ControlValue::String(s),
+                Value::CompoundU8(bin) | Value::CompoundPtr(bin) => ControlValue::Binary(bin),
+                Value::CompoundU16(u) | Value::CompoundU32(u) => ControlValue::Array(
+                    u.into_iter().map(|u| ControlValue::Integer(u as i64)).collect()
+                ),
+            })
+        }).collect::<HashMap<ControlId, ControlValue>>();
+
+        match Controls::new(descriptions, values) {
+            Some(c) => { self.controls = c; }
+            None => return Err(NokhwaError::SetPropertyError {
+                property: "control".to_string(),
+                value: format!("{:?} {:?}", descriptions, values),
+                error: "Failed to convert to control".to_string(),
+            })
+        }
+
+        Ok(())
+    }
+}
+
+struct V4L2Stream {
+    thread: JoinHandle<()>,
+    control: Sender<()>,
+    receiver: Arc<Receiver<FrameBuffer>>,
+}
+
+impl Drop for V4L2Stream {
+    fn drop(&mut self) {
+        let _ = self.control.send(());
     }
 }
 
 impl Capture for V4L2Camera {
     fn open_stream(&mut self) -> Result<Stream, NokhwaError> {
-        todo!()
+        let format = match self.camera_format {
+            Some(fmt) => fmt,
+            None => return Err(NokhwaError::OpenStreamError("No Format".to_string()))
+        };
+
+        let (control, ctrl_recv) = bounded(1);
+        let (sender, receiver) = unbounded();
+        let receiver = Arc::new(receiver);
+
+        self.set_format(format)?;
+
+        let mut mmap_stream = MmapStream::new(&self.device, v4l::buffer::Type::VideoCapture).map_err(|why| {
+            return NokhwaError::OpenStreamError(why.to_string())
+        })?;
+
+        let thread = std::thread::spawn(move || {
+
+            loop {
+                if ctrl_recv.is_disconnected() || sender.is_disconnected() {
+                    return;
+                }
+                if let Ok(_) = ctrl_recv.try_recv() {
+                    return;
+                }
+
+                match mmap_stream.next() {
+                    Ok((data, meta)) => {
+                        FrameBuffer::new()
+                    }
+                    Err(_) => {}
+                }
+            }
+            ()
+        })
     }
 
     fn close_stream(&mut self) -> Result<(), NokhwaError> {

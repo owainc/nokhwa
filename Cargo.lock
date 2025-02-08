@@ -1241,7 +1241,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "887d93f60543e9a9362ef8a21beedd0a833c5d9610e18c67abe15a5963dcb1a4"
 dependencies = [
  "bit_field",
- "flume 0.11.0",
+ "flume 0.11.1",
  "half",
  "lebe",
  "miniz_oxide",
@@ -1306,9 +1306,9 @@ dependencies = [
 
 [[package]]
 name = "flume"
-version = "0.11.0"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55ac459de2512911e4b674ce33cf20befaba382d05b62b008afc1c8b57cbf181"
+checksum = "da0e4dd2a88388a1f4ccc7c9ce104604dab68d9f408dc34cd45823d5a9069095"
 dependencies = [
  "futures-core",
  "futures-sink",
@@ -2491,7 +2491,7 @@ name = "nokhwa"
 version = "0.11.0"
 dependencies = [
  "async-trait",
- "flume 0.11.0",
+ "flume 0.11.1",
  "image 0.25.0",
  "js-sys",
  "mozjpeg",
@@ -2516,6 +2516,7 @@ dependencies = [
 name = "nokhwa-bindings-linux"
 version = "0.2.0"
 dependencies = [
+ "flume 0.11.1",
  "nokhwa-core",
  "pipewire",
  "v4l",
@@ -2531,7 +2532,7 @@ dependencies = [
  "cocoa-foundation",
  "core-media-sys",
  "core-video-sys",
- "flume 0.11.0",
+ "flume 0.11.1",
  "nokhwa-core",
  "objc",
  "once_cell",
@@ -2553,7 +2554,7 @@ dependencies = [
  "async-trait",
  "bytes",
  "derive_builder",
- "flume 0.11.0",
+ "flume 0.11.1",
  "futures",
  "image 0.25.0",
  "num-rational 0.4.2",
