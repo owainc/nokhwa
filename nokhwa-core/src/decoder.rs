@@ -1,18 +1,14 @@
 use crate::{error::NokhwaError, frame_buffer::FrameBuffer, frame_format::FrameFormat};
 use image::{ImageBuffer, Pixel};
-use std::{
-    ops::{ControlFlow, Deref},
-};
+use std::ops::{ControlFlow, Deref};
 
 /// Trait to define a struct that can decode a [`FrameBuffer`]
-pub trait Decoder {
+pub trait Decoder<OutputPixel: Pixel> {
     /// Formats that the decoder can decode.
     const ALLOWED_FORMATS: &'static [FrameFormat];
-    /// Output pixel type (e.g. [`Rgb<u8>`](image::Rgb))
-    type OutputPixels: Pixel;
 
     /// Container type for the decoder. Will be used for ImageBuffer
-    type PixelContainer: Deref<Target = [<<Self as Decoder>::OutputPixels as Pixel>::Subpixel]>;
+    type PixelContainer: Deref<Target = [OutputPixel::Subpixel]>;
 
     fn check_format(buffer: &FrameBuffer) -> ControlFlow<NokhwaError> {
         if !Self::ALLOWED_FORMATS.contains(&buffer.source_frame_format()) {
@@ -26,7 +22,7 @@ pub trait Decoder {
     fn decode(
         &mut self,
         buffer: &FrameBuffer,
-    ) -> Result<ImageBuffer<Self::OutputPixels, Self::PixelContainer>, NokhwaError>;
+    ) -> Result<ImageBuffer<OutputPixel, Self::PixelContainer>, NokhwaError>;
 
     /// Decode to user-provided Buffer
     ///
@@ -34,7 +30,7 @@ pub trait Decoder {
     fn decode_buffer(
         &mut self,
         buffer: &FrameBuffer,
-        output: &mut [<<Self as Decoder>::OutputPixels as Pixel>::Subpixel],
+        output: &mut [OutputPixel::Subpixel],
     ) -> Result<(), NokhwaError>;
 
     /// Decoder Predicted Size
@@ -46,8 +42,8 @@ pub trait Decoder {
         Some(
             res.x() as usize
                 * res.y() as usize
-                * size_of::<<<Self as Decoder>::OutputPixels as Pixel>::Subpixel>()
-                * <<Self as Decoder>::OutputPixels as Pixel>::CHANNEL_COUNT as usize,
+                * size_of::<OutputPixel::Subpixel>()
+                * OutputPixel::CHANNEL_COUNT as usize,
         )
     }
 }
@@ -55,47 +51,48 @@ pub trait Decoder {
 /// Decoder that can be used statically (struct contains no state)
 ///
 /// This is useful for times that a simple function is all that is required.
-pub trait StaticDecoder: Decoder {
+pub trait StaticDecoder<OutputPixel: Pixel>: Decoder<OutputPixel> {
     fn decode_static(
         buffer: &FrameBuffer,
-    ) -> Result<ImageBuffer<Self::OutputPixels, Self::PixelContainer>, NokhwaError>;
+    ) -> Result<ImageBuffer<OutputPixel, Self::PixelContainer>, NokhwaError>;
 
     fn decode_static_to_buffer(
         buffer: &FrameBuffer,
-        output: &mut [<<Self as Decoder>::OutputPixels as Pixel>::Subpixel],
+        output: &mut [OutputPixel::Subpixel],
     ) -> Result<(), NokhwaError>;
 }
 
 #[cfg(feature = "async")]
 #[cfg_attr(feature = "async", async_trait::async_trait)]
-pub trait AsyncDecoder: Decoder {
+pub trait AsyncDecoder<OutputPixel: Pixel>: Decoder<OutputPixel> {
     /// Asynchronous decoder
     async fn decode_async(
         &mut self,
         buffer: &FrameBuffer,
-    ) -> Result<ImageBuffer<Self::OutputPixels, Self::PixelContainer>, NokhwaError>;
+    ) -> Result<ImageBuffer<OutputPixel, Self::PixelContainer>, NokhwaError>;
 
     /// Asynchronous decoder to user buffer.
     async fn decode_buffer(
         &mut self,
         buffer: &FrameBuffer,
-        output: &mut [<<Self as Decoder>::OutputPixels as Pixel>::Subpixel],
+        output: &mut [OutputPixel::Subpixel],
     ) -> Result<(), NokhwaError>;
 }
 
 #[cfg(feature = "async")]
 #[cfg_attr(feature = "async", async_trait::async_trait)]
-pub trait AsyncStaticDecoder: Decoder {
+pub trait AsyncStaticDecoder<OutputPixel: Pixel>:
+    Decoder<OutputPixel> + AsyncDecoder<OutputPixel>
+{
     /// Asynchronous decoder
     async fn decode_static_async(
         buffer: &FrameBuffer,
-    ) -> Result<ImageBuffer<Self::OutputPixels, Self::PixelContainer>, NokhwaError>;
+    ) -> Result<ImageBuffer<OutputPixel, Self::PixelContainer>, NokhwaError>;
 
     /// Asynchronous decoder to user buffer.
-    async fn decode_static_buffer(
-        &mut self,
+    async fn decode_static_buffer_async(
         buffer: &FrameBuffer,
-        output: &mut [<<Self as Decoder>::OutputPixels as Pixel>::Subpixel],
+        output: &mut [OutputPixel::Subpixel],
     ) -> Result<(), NokhwaError>;
 }
 
