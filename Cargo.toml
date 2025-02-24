@@ -2,7 +2,7 @@
 name = "nokhwa"
 version = "0.11.0"
 authors = ["l1npengtul <l1npengtul@protonmail.com>"]
-edition = "2021"
+edition = "2024"
 description = "A Simple-to-use, cross-platform Rust Webcam Capture Library"
 keywords = ["camera", "webcam", "capture", "cross-platform"]
 categories = ["api-bindings", "multimedia", "os", "web-programming"]
@@ -12,8 +12,8 @@ repository = "https://github.com/l1npengtul/nokhwa"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = ["nokhwa-bindings-macos", "nokhwa-bindings-windows", "nokhwa-bindings-linux", "nokhwa-core", "examples/*"]
-exclude = ["examples/jscam"]
+members = ["nokhwa-bindings-macos", "nokhwa-bindings-windows", "nokhwa-bindings-linux", "nokhwa-core"]
+exclude = ["examples/*"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -68,11 +68,11 @@ version = "0.2"
 optional = true
 
 [dependencies.wgpu]
-version = "23"
+version = "24"
 optional = true
 
 [dependencies.opencv]
-version = "0.93"
+version = "0.94"
 default-features = false
 features = ["videoio"]
 optional = true

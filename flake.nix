@@ -45,6 +45,7 @@
               v4l-utils
               libv4l
               pipewire
+              rustup
           ]);
 
           env.RUST_SRC_PATH = "${rustbin}/lib/rustlib/src/rust/library";

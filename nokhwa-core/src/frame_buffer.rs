@@ -13,31 +13,85 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+use std::hash::{Hash, Hasher};
 use crate::frame_format::FrameFormat;
 use crate::types::Resolution;
-use bytes::Bytes;
+use small_map::{FxSmallMap, Iter};
+use crate::control::ControlValue;
+
+pub type PlatformSpecificFlag = u32;
+
+#[derive(Clone, Debug, Default)]
+pub struct Metadata {
+    flags: FxSmallMap<8, u32, ControlValue>,
+}
+
+impl Metadata {
+    pub fn new() -> Self {
+        Self {
+            flags: Default::default(),
+        }
+    } 
+    
+    pub fn get(&self, key: u32) -> Option<&ControlValue> {
+        self.flags.get(&key)
+    }
+    
+    pub fn insert(&mut self, key: u32, value: ControlValue) {
+        self.flags.insert(key, value);
+    }
+    
+    pub fn iter(&self) -> Iter<'_, 8, u32, ControlValue> {
+        self.flags.iter()
+    }
+}
+
+impl Hash for Metadata {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for (key, value) in self.flags {
+            state.write_u32(key);
+            value.hash(state);
+        }
+    }
+}
+
+impl PartialEq for Metadata {
+    fn eq(&self, other: &Self) -> bool {
+        for (this_key, this_value) in &self.flags {
+            if let Some(other_value) = other.flags.get(this_key) {
+                if this_value != other_value {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+        true
+    }
+}
 
 /// A buffer returned by a camera to accommodate custom decoding.
 /// Contains information of Resolution, the buffer's [`FrameFormat`], and the buffer.
 ///
 /// Note that decoding on the main thread **will** decrease your performance and lead to dropped frames.
-#[derive(Clone, Debug, Hash, PartialOrd, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq)]
 pub struct FrameBuffer {
     resolution: Resolution,
-    buffer: Bytes,
+    buffer: Vec<u8>,
     source_frame_format: FrameFormat,
+    metadata: Option<Metadata>,
 }
 
 impl FrameBuffer {
     /// Creates a new buffer with a [`&[u8]`].
     #[must_use]
     #[inline]
-    pub fn new(res: Resolution, buf: &[u8], source_frame_format: FrameFormat) -> Self {
+    pub fn new(resolution: Resolution, buffer: Vec<u8>, source_frame_format: FrameFormat, metadata: Option<Metadata>) -> Self {
         Self {
-            resolution: res,
-            buffer: Bytes::copy_from_slice(buf),
+            resolution,
+            buffer,
             source_frame_format,
+            metadata,
         }
     }
 
@@ -53,10 +107,14 @@ impl FrameBuffer {
         &self.buffer
     }
 
-    /// Get an owned version of this buffer. Note: This is the equivalent
     #[must_use]
-    pub fn buffer_bytes(&self) -> Bytes {
-        self.buffer.clone()
+    pub fn consume(self) -> Vec<u8> {
+        self.buffer
+    }
+    
+    #[must_use]
+    pub fn metadata(&self) -> Option<&Metadata> {
+        self.metadata.as_ref()
     }
 
     /// Get the [`SourceFrameFormat`] of this buffer.
