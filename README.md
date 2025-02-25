@@ -92,10 +92,11 @@ Contributions are welcome!
 `nokhwa` may build on older versions of `rustc`, but there is no guarantee except for the latest stable rust. 
 
 ## Sponsors
+- $30/mo sponsors:
+  - [Cap Software](https://cap.so/)
 - $10/mo sponsors:
   - [yunho-c](https://github.com/yunho-c)
 - $5/mo sponsors:
-  - [patte](https://github.com/patte)
   - [mason-bially](https://github.com/mason-bially)
   
 Please consider [donating](https://github.com/sponsors/l1npengtul)!
