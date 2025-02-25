@@ -8,9 +8,14 @@ A Simple-to-use, cross-platform Rust Webcam Capture Library
 Nokhwa can be added to your crate by adding it to your `Cargo.toml`:
 ```toml
 [dependencies.nokhwa]
-version = "0.10.0"
+version = "0.10"
 # Use the native input backends, enable WGPU integration
 features = ["input-native", "output-wgpu"]
+
+# add this to enable exporting to a JPEG/PNG
+[dependencies.image]
+version = "0.25"
+features = ["default-formats"]
 ```
 
 Most likely, you will only use functionality provided by the `Camera` struct. If you need lower-level access, you may instead opt to use the raw capture backends found at `nokhwa::backends::capture::*`.
