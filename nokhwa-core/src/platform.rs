@@ -37,7 +37,6 @@ pub trait PlatformTrait {
 }
 
 #[cfg(feature = "async")]
-#[cfg_attr(feature = "async", async_trait::async_trait)]
 pub trait AsyncPlatformTrait {
     const PLATFORM: Backends;
     type AsyncCamera: AsyncCamera;

@@ -1,10 +1,7 @@
 #![deny(clippy::pedantic)]
 #![warn(clippy::all)]
-#![allow(clippy::cast_precision_loss)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_possible_truncation)]
 #![cfg_attr(feature = "test-fail-warning", deny(warnings))]
-// #![cfg_attr(feature = "docs-features", feature(doc_cfg))]
+#![cfg_attr(feature = "docs-features", feature(doc_cfg))]
 /*
  * Copyright 2022 l1npengtul <l1npengtul@protonmail.com> / The Nokhwa Contributors
  *

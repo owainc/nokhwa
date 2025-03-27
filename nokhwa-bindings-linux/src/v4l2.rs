@@ -4,13 +4,14 @@ use nokhwa_core::error::{NokhwaError, NokhwaResult};
 use nokhwa_core::frame_format::FrameFormat;
 use nokhwa_core::platform::{Backends, PlatformTrait};
 use nokhwa_core::ranges::Range;
-use nokhwa_core::stream::Stream;
+use nokhwa_core::stream::{StreamHandle, StreamConfiguration, StreamInnerTrait};
 use nokhwa_core::types::{CameraFormat, CameraIndex, CameraInformation, FrameRate, Resolution};
 use std::collections::hash_map::{Keys, Values};
 use std::collections::{HashMap, HashSet};
 use std::num::NonZeroI32;
 use std::sync::Arc;
-use std::thread::JoinHandle;
+use std::thread::{sleep, JoinHandle};
+use std::time::Duration;
 use flume::{Sender, Receiver, unbounded, bounded};
 use v4l::context::enum_devices;
 use v4l::control::{Description, Flags, MenuItem, Type, Value};
@@ -348,7 +349,7 @@ pub struct V4L2Camera {
     camera_format: Option<CameraFormat>,
     camera_index: CameraIndex,
     controls: Controls,
-    stream: Option<Stream>,
+    stream: Option<Arc<StreamHandle>>,
 }
 
 impl Setting for V4L2Camera {
@@ -503,7 +504,7 @@ impl Setting for V4L2Camera {
 struct V4L2Stream {
     thread: JoinHandle<()>,
     control: Sender<()>,
-    receiver: Arc<Receiver<FrameBuffer>>,
+    receiver: Arc<Receiver<NokhwaResult<FrameBuffer>>>,
 }
 
 impl Drop for V4L2Stream {
@@ -512,14 +513,41 @@ impl Drop for V4L2Stream {
     }
 }
 
+impl StreamInnerTrait for V4L2Stream {
+    fn configuration(&self) -> &Option<StreamConfiguration> {
+        &None
+    }
+
+
+    fn receiver(&self) -> Arc<Receiver<NokhwaResult<FrameBuffer>>> {
+        self.receiver.clone()
+    }
+
+    fn stop(&mut self) -> NokhwaResult<()> {
+        self.control.send(()).map_err(|why| NokhwaError::StreamShutdownError(why.to_string()))?;
+        loop {
+            if self.thread.is_finished() {
+                break;
+            }
+            sleep(Duration::from_millis(1))
+        }
+        Ok(())
+    }
+}
+
 impl Capture for V4L2Camera {
-    fn open_stream(&mut self) -> Result<Stream, NokhwaError> {
+    fn open_stream(&mut self) -> Result<Arc<StreamHandle>, NokhwaError> {
+        if self.stream.is_some() {
+            return Err(NokhwaError::OpenStreamError("Stream Already Open".to_string()))
+        }
+
+
         let format = match self.camera_format {
             Some(fmt) => fmt,
             None => return Err(NokhwaError::OpenStreamError("No Format".to_string()))
         };
 
-        let (control, ctrl_recv) = bounded(1);
+        let (control, ctrl_recv) = bounded::<()>(1);
         let (sender, receiver) = unbounded();
         let receiver = Arc::new(receiver);
 
@@ -530,7 +558,6 @@ impl Capture for V4L2Camera {
         })?;
 
         let thread = std::thread::spawn(move || {
-
             loop {
                 if ctrl_recv.is_disconnected() || sender.is_disconnected() {
                     return;
@@ -540,18 +567,37 @@ impl Capture for V4L2Camera {
                 }
 
                 match mmap_stream.next() {
-                    Ok((data, meta)) => {
-                        FrameBuffer::new()
+                    Ok((data, _meta)) => { // TODO: Add metadata 
+                        if let Err(_why) = sender.send(Ok(FrameBuffer::new(data))) {
+                            return ();
+                        }
                     }
-                    Err(_) => {}
+                    Err(why) => {
+                        if let Err(_why) = sender.send(Err(NokhwaError::ReadFrameError(why.to_string()))) {
+                            return ();
+                        }
+                    }
                 }
             }
-            ()
-        })
+            return ();
+        });
+        
+        let stream = Arc::new(StreamHandle::new(Box::new(V4L2Stream {
+            thread,
+            control,
+            receiver,
+        })));
+        
+        self.stream = Some(stream.clone());
+        Ok(stream)
     }
 
     fn close_stream(&mut self) -> Result<(), NokhwaError> {
-        todo!()
+        if let Some(stream) = self.stream.clone() {
+            stream.stop_stream()?;
+            
+        }
+        Ok(())
     }
 }
 

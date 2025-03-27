@@ -1,10 +1,11 @@
 use crate::control::{ControlDescription, ControlId, ControlValue, Controls};
 use crate::error::NokhwaError;
 use crate::frame_format::FrameFormat;
-use crate::stream::Stream;
+use crate::stream::StreamHandle;
 use crate::types::{CameraFormat, FrameRate, Resolution};
 use std::collections::hash_map::{Keys, Values};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 pub trait Setting {
     fn enumerate_formats(&self) -> Result<Vec<CameraFormat>, NokhwaError>;
@@ -33,7 +34,6 @@ pub trait Setting {
 }
 
 #[cfg(feature = "async")]
-#[cfg_attr(feature = "async", async_trait::async_trait)]
 pub trait AsyncSetting {
     async fn enumerate_formats_async(&self) -> Result<Vec<CameraFormat>, NokhwaError>;
 
@@ -55,16 +55,15 @@ pub trait AsyncSetting {
 
 pub trait Capture {
     // Implementations MUST guarantee that there can only ever be one stream open at once.
-    fn open_stream(&mut self) -> Result<Stream, NokhwaError>;
+    fn open_stream(&mut self) -> Result<Arc<StreamHandle>, NokhwaError>;
 
     // Implementations MUST be multi-close tolerant.
     fn close_stream(&mut self) -> Result<(), NokhwaError>;
 }
 
 #[cfg(feature = "async")]
-#[cfg_attr(feature = "async", async_trait::async_trait)]
 pub trait AsyncStream {
-    async fn open_stream_async(&mut self) -> Result<Stream, NokhwaError>;
+    async fn open_stream_async(&mut self) -> Result<StreamHandle, NokhwaError>;
 
     async fn close_stream_async(&mut self) -> Result<(), NokhwaError>;
 }
@@ -72,5 +71,4 @@ pub trait AsyncStream {
 pub trait Camera: Setting + Capture {}
 
 #[cfg(feature = "async")]
-#[cfg_attr(feature = "async", async_trait::async_trait)]
 pub trait AsyncCamera: Camera + AsyncSetting + AsyncStream {}

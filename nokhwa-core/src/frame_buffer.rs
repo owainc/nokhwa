@@ -15,7 +15,6 @@
  */
 use std::hash::{Hash, Hasher};
 use crate::frame_format::FrameFormat;
-use crate::types::Resolution;
 use small_map::{FxSmallMap, Iter};
 use crate::control::ControlValue;
 
@@ -76,9 +75,7 @@ impl PartialEq for Metadata {
 /// Note that decoding on the main thread **will** decrease your performance and lead to dropped frames.
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct FrameBuffer {
-    resolution: Resolution,
     buffer: Vec<u8>,
-    source_frame_format: FrameFormat,
     metadata: Option<Metadata>,
 }
 
@@ -86,21 +83,13 @@ impl FrameBuffer {
     /// Creates a new buffer with a [`&[u8]`].
     #[must_use]
     #[inline]
-    pub fn new(resolution: Resolution, buffer: Vec<u8>, source_frame_format: FrameFormat, metadata: Option<Metadata>) -> Self {
+    pub fn new(buffer: Vec<u8>, metadata: Option<Metadata>) -> Self {
         Self {
-            resolution,
             buffer,
-            source_frame_format,
             metadata,
         }
     }
-
-    /// Get the [`Resolution`] of this buffer.
-    #[must_use]
-    pub fn resolution(&self) -> Resolution {
-        self.resolution
-    }
-
+    
     /// Get the data of this buffer.
     #[must_use]
     pub fn buffer(&self) -> &[u8] {
@@ -117,9 +106,4 @@ impl FrameBuffer {
         self.metadata.as_ref()
     }
 
-    /// Get the [`SourceFrameFormat`] of this buffer.
-    #[must_use]
-    pub fn source_frame_format(&self) -> FrameFormat {
-        self.source_frame_format
-    }
 }

@@ -16,7 +16,7 @@ serialize = ["serde"]
 wgpu-types = ["wgpu"]
 opencv-mat = ["opencv", "opencv/clang-runtime"]
 docs-features = ["serialize", "wgpu-types"]
-async = ["async-trait", "flume/async"]
+async = ["async-trait", "flume/async", "futures-core"]
 test-fail-warnings = []
 
 
@@ -25,6 +25,7 @@ thiserror = "2.0"
 flume = "0.11"
 num-traits = "0.2"
 ordered-float = "5"
+typed-builder = "0.20"
 
 [dependencies.num-rational]
 version = "0.4"
@@ -58,7 +59,9 @@ optional = true
 version = "0.1"
 optional = true
 
-
+[dependencies.futures-core]
+version = "0.3"
+optional = true
 
 [package.metadata.docs.rs]
 features = ["docs-features"]
